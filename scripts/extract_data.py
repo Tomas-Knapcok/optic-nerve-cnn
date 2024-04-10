@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import cv2
 import imhandle as imh
+from skimage.transform import resize
 
 HEALTHY = 0
 GLAUCOMA_OR_SUSPECT = 1
@@ -41,17 +42,16 @@ def extract_DRIONS_DB(db_folder, expert=1):
         anot_filename = os.path.join(db_folder, 'experts_annotation', 'anotExpert{}_{}.txt'.format(expert, code))
         with open(anot_filename) as anot_fin:
             coords = anot_fin.readlines()
-        coords = map(lambda s: map(lambda x: int(round(float(x))), s.split(' , ')),
-                     coords)
+        coords = [list(map(lambda x: int(round(float(x))), s.strip().split(','))) for s in coords]
         coords = np.array(coords)
         segm_img = np.zeros(orig_resolution, dtype=np.uint8)
         cv2.fillPoly(segm_img, coords.reshape((1,) + coords.shape), color=1)
         Y.append(segm_img)
 
-    for i in xrange(len(X)):
+    for i in range(len(X)):
         side = result_resolution[0]
-        X[i] = imh.resize_image_to_square(X[i][:, left_cut_thr:], side, pad_cval=0)
-        Y[i] = imh.resize_image_to_square(Y[i][:, left_cut_thr:], side, pad_cval=0)
+        X[i] = resize(X[i][:, left_cut_thr:], (side, side), mode='constant', cval=0)
+        Y[i] = resize(Y[i][:, left_cut_thr:], (side, side), mode='constant', cval=0)
         Y[i] = Y[i].reshape(Y[i].shape + (1,))
 
     return X, Y, file_codes
@@ -117,10 +117,10 @@ def extract_RIM_ONE_v2(db_folder):
             Y.append(segm_img)
             is_ill.append(HEALTHY if pic_type == 'Normal' else GLAUCOMA_OR_SUSPECT)
 
-        for i in xrange(len(X)):
+        for i in range(len(X)):
             side = result_resolution[0]
-            X[i] = imh.resize_image_to_square(X[i], side, pad_cval=0)
-            Y[i] = imh.resize_image_to_square(Y[i], side, pad_cval=0)
+            X[i] = resize(X[i], (side, side), cval=0)
+            Y[i] = resize(Y[i], (side, side), cval=0)
             Y[i] = Y[i].reshape(Y[i].shape + (1,))
 
         X_all.extend(X)
@@ -206,25 +206,25 @@ def extract_RIM_ONE_v3(db_folder, expert='avg', return_disc=True, return_cup=Tru
 
             is_ill.append(HEALTHY if pic_type == 'Healthy' else GLAUCOMA_OR_SUSPECT)
 
-    for i in xrange(len(X_all)):
+    for i in range(len(X_all)):
         side = result_resolution[0]
         if file_codes_all[i][-1] == 'L':
-            X_all[i] = X_all[i][:, :orig_resolution[1] / 2]
+            X_all[i] = X_all[i][:, :orig_resolution[1] // 2]
         elif file_codes_all[i][-1] == 'R':
-            X_all[i] = X_all[i][:, orig_resolution[1] / 2:]
+            X_all[i] = X_all[i][:, orig_resolution[1] // 2:]
         if return_disc:
-            disc_all[i] = disc_all[i][:, :orig_resolution[1] / 2]
+            disc_all[i] = disc_all[i][:, :orig_resolution[1] // 2]
         if return_cup:
-            cup_all[i] = cup_all[i][:, :orig_resolution[1] / 2]
+            cup_all[i] = cup_all[i][:, :orig_resolution[1] // 2]
         else:
             raise imh.ImLibException('image {} has no L/R characteristic'.format(file_codes_all[i]))
 
-        X_all[i] = imh.resize_image_to_square(X_all[i], side, pad_cval=0)
+        X_all[i] = resize(X_all[i], (side, side), cval=0)
         if return_disc:
-            disc_all[i] = imh.resize_image_to_square(disc_all[i], side, pad_cval=0)
+            disc_all[i] = resize(disc_all[i], (side, side), cval=0)
             disc_all[i] = disc_all[i].reshape(disc_all[i].shape + (1,))
         if return_cup:
-            cup_all[i] = imh.resize_image_to_square(cup_all[i], side, pad_cval=0)
+            cup_all[i] = resize(cup_all[i], (side, side), cval=0)
             cup_all[i] = cup_all[i].reshape(cup_all[i].shape + (1,))
 
     if return_disc:
@@ -288,15 +288,15 @@ def extract_DRISHTI_GS_train(db_folder, return_disc=True, return_cup=True):
                                                     'SoftMap', fn + '_cupsegSoftmap.png'))
             cup_all.append(cup_segmn)
 
-    for i in xrange(len(X_all)):
+    for i in range(len(X_all)):
         side = result_resolution[0]
 
-        X_all[i] = imh.resize_image_to_square(X_all[i], side, pad_cval=0)
+        X_all[i] = resize(X_all[i], (side, side), cval=0)
         if return_disc:
-            disc_all[i] = imh.resize_image_to_square(disc_all[i], side, pad_cval=0)
+            disc_all[i] = resize(disc_all[i], (side, side), cval=0)
             disc_all[i] = disc_all[i].reshape(disc_all[i].shape + (1,))
         if return_cup:
-            cup_all[i] = imh.resize_image_to_square(cup_all[i], side, pad_cval=0)
+            cup_all[i] = resize(cup_all[i], (side, side), cval=0)
             cup_all[i] = cup_all[i].reshape(cup_all[i].shape + (1,))
 
     if return_disc:
@@ -332,9 +332,9 @@ def extract_DRISHTI_GS_test(db_folder):
     rel_file_names_wo_ext = [fn[:fn.rfind('.')] for fn in rel_file_names]
     file_codes = ['Test' + fn[fn.find('_'):] for fn in rel_file_names_wo_ext]
     
-    for i in xrange(len(X_all)):
+    for i in range(len(X_all)):
         side = result_resolution[0]
-        X_all[i] = imh.resize_image_to_square(X_all[i], side, pad_cval=0)
+        X_all[i] = resize(X_all[i], (side, side), cval=0)
     
     return X_all, file_codes 
 
@@ -380,7 +380,7 @@ def extract_HRF(db_folder, expert=1):
         file_codes = [fn[:fn.rfind('.')] for fn in rel_file_names]
         file_codes_all.extend(file_codes)
 
-        for i in xrange(len(X)):
+        for i in range(len(X)):
             record_str = file_codes[i]
             if expert == 2:
                 record_str = record_str.replace('_', '')
@@ -388,16 +388,16 @@ def extract_HRF(db_folder, expert=1):
             anot_record = anot_df.loc[record_str]
             od_center = (anot_record['Pap. Center x'], anot_record['Pap. Center y'])
             #od_center = (anot_record['vessel orig. x'], anot_record['vessel orig. y'])
-            od_radius = anot_record['disk diameter'] / 2
+            od_radius = int(anot_record['disk diameter'] / 2)
             segmn_img = np.zeros(orig_resolution, dtype=np.uint8)
             cv2.circle(segmn_img, od_center, od_radius, color=1, thickness=-1)
             Y_all.append(segmn_img)
             is_ill.append(HEALTHY if pic_type == 'Healthy' else GLAUCOMA_OR_SUSPECT)
 
-    for i in xrange(len(X_all)):
+    for i in range(len(X_all)):
         side = result_resolution[0]
-        X_all[i] = imh.resize_image_to_square(X_all[i], side, pad_cval=0)
-        Y_all[i] = imh.resize_image_to_square(Y_all[i], side, pad_cval=0)
+        X_all[i] = resize(X_all[i], (side, side), cval=0)
+        Y_all[i] = resize(Y_all[i], (side, side), cval=0)
         Y_all[i] = Y_all[i].reshape(Y_all[i].shape + (1,))
 
     return X_all, Y_all, file_codes_all, is_ill
